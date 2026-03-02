@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>GLD Options Live Dashboard</title>
+  <title>GLD Options Live Dashboard PRO</title>
   <!-- Favicon: золотой ромб -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='80' height='80' x='10' y='10' fill='%23C8A84B' transform='rotate(45 50 50)' /></svg>">
   <!-- Шрифты -->
@@ -161,8 +161,7 @@
     .m-foot { margin-top: 16px; text-align: center; font-size: 11px; color: var(--muted); line-height: 1.7; }
     .m-foot a { color: var(--g1); text-decoration: none; }
     .m-foot a:hover { text-decoration: underline; }
-
-    /* Dashboard */
+        /* Dashboard */
     #app { position: fixed; inset: 0; z-index: 10; padding-top: 52px; display: none; flex-direction: column; }
     #app.on { display: flex; }
     .layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
@@ -240,7 +239,7 @@
     }
     .tbl td {
       padding: 8px 11px; font-family: 'JetBrains Mono', monospace; font-size: 11px;
-      font-weight: 400; /* чёткость */
+      font-weight: 500;
     }
     .tbl tr { border-bottom: 1px solid rgba(200,168,75,.04); transition: background .12s; }
     .tbl tr:hover { background: rgba(200,168,75,.03); }
@@ -296,7 +295,7 @@
 <nav>
   <div class="logo">
     <div class="logo-m">◈</div>
-    <div class="logo-t">GLD OPTIONS LIVE</div>
+    <div class="logo-t">GLD OPTIONS LIVE PRO</div>
   </div>
   <div class="nav-r">
     <div class="live"><div class="dot"></div>LIVE</div>
@@ -350,7 +349,7 @@
       <div class="sb-i on"  onclick="nav('overview',this)"><span class="ic">◈</span>Обзор</div>
       <div class="sb-i"     onclick="nav('chain',this)"   ><span class="ic">📋</span>Опционная цепочка</div>
       <div class="sb-i"     onclick="nav('levels',this)"  ><span class="ic">📊</span>Ключевые уровни</div>
-      <div class="sb-i"     onclick="nav('gex',this)"     ><span class="ic">⚡</span>GEX анализ</div>
+      <div class="sb-i"     onclick="nav('gex',this)"     ><span class="ic">⚡</span>GEX анализ (PRO)</div>
       <div class="sb-end"></div>
       <div class="sb-ft">
         Обновление: <b id="sb-upd">—</b><br>
@@ -364,7 +363,7 @@
 
 <script>
 // ═════════════════════════════════════════════════════════════════════════════
-// CANVAS BACKGROUND (золотая сетка)
+// CANVAS BACKGROUND
 // ═════════════════════════════════════════════════════════════════════════════
 const cnv = document.getElementById('bg'), c2 = cnv.getContext('2d');
 let W, H, pts = [];
@@ -415,7 +414,7 @@ rs(); ip(); draw();
 window.addEventListener('resize', () => { rs(); ip(); });
 
 // ═════════════════════════════════════════════════════════════════════════════
-// AUTH (используем localStorage вместо sessionStorage)
+// AUTH (используем localStorage)
 // ═════════════════════════════════════════════════════════════════════════════
 const eyeBtn = document.getElementById('eye'), keyI = document.getElementById('f-key');
 eyeBtn.onclick = () => {
@@ -520,7 +519,7 @@ async function doLogout() {
   document.getElementById('msg').className = 'msg';
 }
 
-// Автовход при загрузке страницы
+// Автовход при загрузке
 (async () => {
   const t = localStorage.getItem('gop_t');
   if (!t) return;
@@ -620,7 +619,6 @@ function buildOverviewStats(d) {
   const regime = d.gex?.regime || '—';
   const dataMode = d.data_mode || '';
 
-  // Добавляем badge BSM если данные синтетические
   const bsmBadge = dataMode === 'bsm' ? '<span class="bsm-badge">⚠ BSM FALLBACK</span>' : '';
 
   const cards = [
@@ -657,7 +655,6 @@ function buildSpotChart(d) {
   const mn = Math.min(...strikes), mx = Math.max(...strikes);
   const toX = s => (s - mn) / (mx - mn) * W;
   const toY = v => H - ((v - Math.min(...strikes.map(r => r.call_oi || 0))) / (Math.max(...strikes.map(r => r.call_oi || 0)) || 1)) * (H - 20) - 10;
-  // OI bars
   chain.filter(r => Math.abs(r.strike - spot) < 30).forEach(r => {
     const x = toX(r.strike);
     const bw = W / strikes.length * 0.7;
@@ -666,7 +663,6 @@ function buildSpotChart(d) {
     ctx.fillStyle = 'rgba(231,76,60,.25)';
     ctx.fillRect(x, H - Math.min((r.put_oi || 0) / 200, H - 10), bw/2, Math.min((r.put_oi || 0) / 200, H - 10));
   });
-  // Spot line
   const sx = toX(spot);
   ctx.strokeStyle = 'rgba(200,168,75,.8)';
   ctx.lineWidth = 1.5;
@@ -690,23 +686,13 @@ function buildGexGauge(d) {
   const norm = Math.min(Math.abs(total) / maxAbs, 1);
   const isPos = total >= 0;
   const cx = W / 2, cy = H * 0.63, r = Math.min(W, H) * 0.43;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
-  ctx.strokeStyle = 'rgba(255,255,255,.06)';
-  ctx.lineWidth = 12;
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, Math.PI, Math.PI + norm * Math.PI);
-  ctx.strokeStyle = isPos ? 'rgba(46,204,113,.8)' : 'rgba(231,76,60,.8)';
-  ctx.lineWidth = 12;
-  ctx.lineCap = 'round';
-  ctx.stroke();
-  ctx.fillStyle = isPos ? '#2ECC71' : '#E74C3C';
-  ctx.font = '700 14px Syne';
-  ctx.textAlign = 'center';
+  ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(255,255,255,.06)'; ctx.lineWidth = 12; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, Math.PI + norm * Math.PI);
+  ctx.strokeStyle = isPos ? 'rgba(46,204,113,.8)' : 'rgba(231,76,60,.8)'; ctx.lineWidth = 12; ctx.lineCap = 'round'; ctx.stroke();
+  ctx.fillStyle = isPos ? '#2ECC71' : '#E74C3C'; ctx.font = '700 14px Syne'; ctx.textAlign = 'center';
   ctx.fillText((total > 0 ? '+' : '') + total.toFixed(1) + 'M', cx, cy + 5);
-  ctx.fillStyle = 'rgba(200,168,75,.55)';
-  ctx.font = '400 9px JetBrains Mono';
+  ctx.fillStyle = 'rgba(200,168,75,.55)'; ctx.font = '400 9px JetBrains Mono';
   ctx.fillText(gex.regime || 'UNKNOWN', cx, cy + 22);
   document.getElementById('gex-b').textContent = gex.regime || '—';
 }
@@ -714,7 +700,7 @@ function buildGexGauge(d) {
 function buildGreeks(d) {
   const el = document.getElementById('greeks-wrap'); if (!el) return;
   const s = d.stats || {};
-  const k = d.levels || {};   // ← ИСПРАВЛЕНО: было d.key_levels
+  const k = d.levels || {};
   el.innerHTML = `
     <table class="tbl">
       <thead><tr><th>ПАРАМЕТР</th><th>ЗНАЧЕНИЕ</th><th>ПАРАМЕТР</th><th>ЗНАЧЕНИЕ</th></tr></thead>
@@ -726,7 +712,6 @@ function buildGreeks(d) {
       </tbody>
     </table>`;
 }
-
 // ═════════════════════════════════════════════════════════════════════════════
 // CHAIN
 // ═════════════════════════════════════════════════════════════════════════════
@@ -772,11 +757,11 @@ function loadLevels() {
     <div id="lv-w"></div>`;
   (cachedData ? Promise.resolve(cachedData) : fetchData())
     .then(d => {
-      const k = d.levels || {};   // ← ИСПРАВЛЕНО
+      const k = d.levels || {};
       const s = d.stats || {};
       const mul = d.multiplier || 10.87;
       const flipZones = k.flip_zones || [];
-      document.getElementById('lv-w').innerHTML = `
+      let html = `
         <div class="sg" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
           <div class="sc"><div class="sl">CALL WALL</div><div class="sv gn">$${(k.call_wall || 0).toFixed(2)}</div><div class="sc-">XAUUSD $${(k.call_wall_adj || 0).toFixed(2)}</div></div>
           <div class="sc"><div class="sl">MAX PAIN</div><div class="sv gd">$${(k.max_pain || 0).toFixed(2)}</div><div class="sc-">XAUUSD $${(k.max_pain_adj || 0).toFixed(2)}</div></div>
@@ -784,7 +769,19 @@ function loadLevels() {
           <div class="sc"><div class="sl">EM HIGH</div><div class="sv gn">$${(s.em_high || 0).toFixed(2)}</div><div class="sc-">+${(s.em_pct || 0).toFixed(2)}%</div></div>
           <div class="sc"><div class="sl">ZERO GAMMA</div><div class="sv gd">$${(k.zero_gamma || 0).toFixed(2)}</div><div class="sc-">XAUUSD $${(k.zero_gamma_adj || 0).toFixed(2)}</div></div>
           <div class="sc"><div class="sl">EM LOW</div><div class="sv rd">$${(s.em_low || 0).toFixed(2)}</div><div class="sc-">-${(s.em_pct || 0).toFixed(2)}%</div></div>
-        </div>
+        </div>`;
+
+      // Балансные страйки (если есть)
+      if (k.oi_balance) {
+        html += `
+          <div class="sg" style="grid-template-columns:repeat(2,1fr);margin-top:10px">
+            <div class="sc"><div class="sl">OI BALANCE</div><div class="sv gd">$${k.oi_balance.toFixed(2)}</div><div class="sc-">XAUUSD $${k.oi_balance_adj.toFixed(2)}</div></div>
+            <div class="sc"><div class="sl">VOLUME BALANCE</div><div class="sv gd">$${k.vol_balance.toFixed(2)}</div><div class="sc-">XAUUSD $${k.vol_balance_adj.toFixed(2)}</div></div>
+          </div>
+        `;
+      }
+
+      html += `
         <div class="panel">
           <div class="ph"><div class="pt">GEX FLIP ZONES</div></div>
           ${flipZones.length ? `<table class="tbl"><thead><tr><th>СТРАЙК GLD (lo)</th><th>СТРАЙК GLD (hi)</th><th>XAUUSD (lo)</th><th>XAUUSD (hi)</th></tr></thead><tbody>
@@ -796,27 +793,34 @@ function loadLevels() {
             </tr>`).join('')}
           </tbody></table>` : '<div style="padding:14px;text-align:center;color:var(--muted);font-family:\'JetBrains Mono\',monospace;font-size:11px">Нет flip зон</div>'}
         </div>`;
+      document.getElementById('lv-w').innerHTML = html;
     })
     .catch(e => { document.getElementById('lv-w').textContent = '⚠ ' + e.message; });
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// GEX
+// GEX ANALYSIS (PRO)
 // ═════════════════════════════════════════════════════════════════════════════
 function loadGex() {
   const c = document.getElementById('content');
-  c.innerHTML = `<div class="sh"><div class="st">GEX <em>АНАЛИЗ</em></div><button class="rb" onclick="loadGex()">↻</button></div>
+  c.innerHTML = `<div class="sh"><div class="st">GEX <em>АНАЛИЗ</em> (PRO)</div><button class="rb" onclick="loadGex()">↻</button></div>
     <div id="gx-w"></div>`;
   (cachedData ? Promise.resolve(cachedData) : fetchData())
     .then(d => {
       const g = d.gex || {};
+      const pro = d.pro_extra || {};
+      const clusters = pro.liquidity_clusters || [];
+      const signals = pro.trading_signals || {};
+      const bounce = pro.bounce_entry_points || {};
+      const gammaFlip = pro.gamma_flip;
       const cls = g.total >= 0 ? 'gn' : 'rd';
-      document.getElementById('gx-w').innerHTML = `
+
+      let html = `
         <div class="sg" style="grid-template-columns:repeat(4,1fr)">
-          <div class="sc"><div class="sl">TOTAL GEX</div><div class="sv ${cls}">${(g.total || 0) > 0 ? '+' : ''}${(g.total || 0).toFixed(2)}M</div><div class="sc- ${cls}">${g.regime || '—'}</div></div>
+          <div class="sc"><div class="sl">TOTAL GEX</div><div class="sv ${cls}">${(g.total || 0)>0 ? '+' : ''}${(g.total || 0).toFixed(2)}M</div><div class="sc- ${cls}">${g.regime || '—'}</div></div>
           <div class="sc"><div class="sl">GEX CALL WALL</div><div class="sv gd">$${(g.gex_wall_call || 0).toFixed(2)}</div><div class="sc-">XAUUSD $${(g.gex_wall_call_adj || 0).toFixed(2)}</div></div>
           <div class="sc"><div class="sl">GEX PUT WALL</div><div class="sv gd">$${(g.gex_wall_put || 0).toFixed(2)}</div><div class="sc-">XAUUSD $${(g.gex_wall_put_adj || 0).toFixed(2)}</div></div>
-          <div class="sc"><div class="sl">NET CHARM</div><div class="sv">${(g.net_charm || 0).toFixed(4)}</div></div>
+          <div class="sc"><div class="sl">GAMMA FLIP</div><div class="sv gd">$${(gammaFlip || 0).toFixed(2)}</div><div class="sc-">XAUUSD $${((gammaFlip||0) * (d.multiplier||10.87)).toFixed(2)}</div></div>
         </div>
         <div class="panel" style="margin-top:12px">
           <div class="ph"><div class="pt">ATTRACTION LEVELS (Long GEX)</div></div>
@@ -829,7 +833,87 @@ function loadGex() {
           ${(g.top_neg || []).length ? `<table class="tbl"><thead><tr><th>СТРАЙК GLD</th><th>GEX</th><th>СИГНАЛ</th></tr></thead><tbody>
             ${(g.top_neg || []).slice(0,8).map(s => `<tr><td>$${s.strike.toFixed(2)}</td><td>${s.gex.toFixed(2)}M</td><td><span class="badge b-sell">SQUEEZE</span></td></tr>`).join('')}
           </tbody></table>` : '<div style="padding:14px;text-align:center;color:var(--muted);font-family:\'JetBrains Mono\',monospace;font-size:11px">Нет данных</div>'}
-        </div>`;
+        </div>
+      `;
+
+      // Кластеры ликвидности
+      if (clusters.length) {
+        html += `
+          <div class="panel">
+            <div class="ph"><div class="pt">КЛАСТЕРЫ ЛИКВИДНОСТИ (топ-5)</div></div>
+            <table class="tbl">
+              <thead><tr><th>ЦЕНТР (GLD)</th><th>ТИП</th><th>O I</th><th>NET GEX</th><th>СИЛА</th></tr></thead>
+              <tbody>
+                ${clusters.slice(0,5).map(c => `
+                  <tr>
+                    <td>$${c.center_strike.toFixed(2)}</td>
+                    <td><span class="badge ${c.cluster_type==='call_wall'?'b-buy':c.cluster_type==='put_wall'?'b-sell':'b-neu'}">${c.cluster_type.toUpperCase()}</span></td>
+                    <td>${c.total_oi.toLocaleString()}</td>
+                    <td>${(c.net_gex/1e6).toFixed(2)}M</td>
+                    <td>${(c.total_strength/1e9).toFixed(2)}B</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      // Торговые сигналы
+      if (signals && (signals.nearest_resistance || signals.nearest_support)) {
+        html += `
+          <div class="panel">
+            <div class="ph"><div class="pt">ТОРГОВЫЕ СИГНАЛЫ 0DTE</div></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div class="sc">
+                <div class="sl">БЛИЖАЙШАЯ ПОДДЕРЖКА</div>
+                <div class="sv gd">$${(signals.nearest_support?.strike || 0).toFixed(2)}</div>
+                <div class="sc-">XAUUSD $${((signals.nearest_support?.strike||0)*d.multiplier).toFixed(2)}</div>
+              </div>
+              <div class="sc">
+                <div class="sl">БЛИЖАЙШЕЕ СОПРОТИВЛЕНИЕ</div>
+                <div class="sv gd">$${(signals.nearest_resistance?.strike || 0).toFixed(2)}</div>
+                <div class="sc-">XAUUSD $${((signals.nearest_resistance?.strike||0)*d.multiplier).toFixed(2)}</div>
+              </div>
+            </div>
+            ${signals.trading_range ? `
+            <div class="sc" style="margin-top:8px">
+              <div class="sl">ТОРГОВЫЙ ДИАПАЗОН</div>
+              <div class="sv gd">$${signals.trading_range.lower} – $${signals.trading_range.upper}</div>
+              <div class="sc-">ширина $${signals.trading_range.width} (${signals.trading_range.width_pct}%)</div>
+            </div>` : ''}
+            <div style="margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--g1);padding:6px;background:rgba(200,168,75,.08);border-radius:6px">
+              ${signals.regime_bias || ''}
+            </div>
+          </div>
+        `;
+      }
+
+      // Точки входа на отбой
+      if (bounce.bounce_setups && bounce.bounce_setups.length) {
+        html += `
+          <div class="panel">
+            <div class="ph"><div class="pt">ТОЧКИ ВХОДА НА ОТБОЙ</div></div>
+            <table class="tbl">
+              <thead><tr><th>НАПРАВЛЕНИЕ</th><th>ВХОД</th><th>СТОП</th><th>ТП1</th><th>ТП2</th><th>R/R</th></tr></thead>
+              <tbody>
+                ${bounce.bounce_setups.map(s => `
+                  <tr>
+                    <td><span class="badge ${s.direction==='LONG'?'b-buy':'b-sell'}">${s.direction}</span></td>
+                    <td>$${s.entry_price}</td>
+                    <td>$${s.stop_loss}</td>
+                    <td>$${s.take_profit_1 || '—'}</td>
+                    <td>$${s.take_profit_2 || '—'}</td>
+                    <td>${s.risk_reward_1 || ''} ${s.risk_reward_2 ? '/'+s.risk_reward_2 : ''}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      document.getElementById('gx-w').innerHTML = html;
     })
     .catch(e => { document.getElementById('gx-w').textContent = '⚠ ' + e.message; });
 }
