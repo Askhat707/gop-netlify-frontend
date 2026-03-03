@@ -624,7 +624,7 @@ function skCards(n) {
 function buildOverviewStats(d) {
   const spot   = d.spot || 0;
   const spotAdj = d.spot_adj || (spot * (d.multiplier || 10.87));
-  const iv     = d.stats?.atm_iv || 0;   // уже в процентах
+  const iv     = d.stats?.atm_iv || 0;
   const gexT   = d.gex?.total || 0;
   const regime = d.gex?.regime || '—';
   const dataMode = d.data_mode || '';
@@ -835,13 +835,13 @@ function loadGex() {
         <div class="panel" style="margin-top:12px">
           <div class="ph"><div class="pt">ATTRACTION LEVELS (Long GEX)</div></div>
           ${(g.top_pos || []).length ? `<table class="tbl"><thead><tr><th>СТРАЙК GLD</th><th>GEX</th><th>СИГНАЛ</th></tr></thead><tbody>
-            ${(g.top_pos || []).slice(0,8).map(s => `<tr><td>$${s.strike.toFixed(2)}</td><td>${s.gex.toFixed(2)}M</td><td><span class="badge b-buy">ATTRACTION</span></td></tr>`).join('')}
+            ${(g.top_pos || []).slice(0,8).map(s => `<tr><td>$${s.strike.toFixed(2)}</td><td>${formatGex(s.gex)}</td><td><span class="badge b-buy">ATTRACTION</span></td></tr>`).join('')}
           </tbody></table>` : '<div style="padding:14px;text-align:center;color:var(--muted);font-family:\'JetBrains Mono\',monospace;font-size:11px">Нет данных</div>'}
         </div>
         <div class="panel">
           <div class="ph"><div class="pt">SQUEEZE LEVELS (Short GEX)</div></div>
           ${(g.top_neg || []).length ? `<table class="tbl"><thead><tr><th>СТРАЙК GLD</th><th>GEX</th><th>СИГНАЛ</th></tr></thead><tbody>
-            ${(g.top_neg || []).slice(0,8).map(s => `<tr><td>$${s.strike.toFixed(2)}</td><td>${s.gex.toFixed(2)}M</td><td><span class="badge b-sell">SQUEEZE</span></td></tr>`).join('')}
+            ${(g.top_neg || []).slice(0,8).map(s => `<tr><td>$${s.strike.toFixed(2)}</td><td>${formatGex(s.gex)}</td><td><span class="badge b-sell">SQUEEZE</span></td></tr>`).join('')}
           </tbody></table>` : '<div style="padding:14px;text-align:center;color:var(--muted);font-family:\'JetBrains Mono\',monospace;font-size:11px">Нет данных</div>'}
         </div>
       `;
