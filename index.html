@@ -10,6 +10,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
+    // Форматирование GEX: если >= 1M → показываем с двумя знаками, иначе в тысячах (K)
+function formatGex(value) {
+    if (value === undefined || value === null) return '0M';
+    if (Math.abs(value) >= 1) {
+        return (value > 0 ? '+' : '') + value.toFixed(2) + 'M';
+    } else {
+        let inK = value * 1000;
+        return (value > 0 ? '+' : '') + inK.toFixed(1) + 'K';
+    }
+}
     /* Глобальные стили и повышение резкости */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -620,12 +630,13 @@ function buildOverviewStats(d) {
   const dataMode = d.data_mode || '';
 
   const bsmBadge = dataMode === 'bsm' ? '<span class="bsm-badge">⚠ BSM FALLBACK</span>' : '';
+  const gexFormatted = formatGex(gexT);
 
   const cards = [
     { l: 'GLD SPOT',    v: '$' + spot.toFixed(2),          ch: d.spot_change || 0, cls: 'gd' },
     { l: 'XAUUSD (ADJ)',v: '$' + spotAdj.toFixed(2),       ch: null,              cls: '' },
     { l: 'ATM IV',      v: iv.toFixed(1) + '%',             ch: null,              cls: '' },
-    { l: 'GEX РЕЖИМ',   v: regime + bsmBadge,               ch: null,              cls: gexT > 0 ? 'gn' : 'rd' }
+    { l: 'GEX РЕЖИМ',   v: regime + ' ' + gexFormatted + bsmBadge, ch: null, cls: gexT > 0 ? 'gn' : 'rd' }
   ];
 
   document.getElementById('sg').innerHTML = cards.map((c, i) => `
@@ -635,7 +646,6 @@ function buildOverviewStats(d) {
       ${c.ch != null ? `<div class="sc- ${c.ch >= 0 ? 'up' : 'dn'}">${c.ch >= 0 ? '▲' : '▼'} ${Math.abs(c.ch).toFixed(2)}%</div>` : ''}
     </div>`).join('');
 }
-
 function buildSpotChart(d) {
   const cv = document.getElementById('ch1'); if (!cv) return;
   const W = cv.offsetWidth || 400, H = cv.offsetHeight || 165;
@@ -817,7 +827,7 @@ function loadGex() {
 
       let html = `
         <div class="sg" style="grid-template-columns:repeat(4,1fr)">
-          <div class="sc"><div class="sl">TOTAL GEX</div><div class="sv ${cls}">${(g.total || 0)>0 ? '+' : ''}${(g.total || 0).toFixed(2)}M</div><div class="sc- ${cls}">${g.regime || '—'}</div></div>
+          <div class="sc"><div class="sl">TOTAL GEX</div><div class="sv ${cls}">${formatGex(g.total || 0)}</div><div class="sc- ${cls}">${g.regime || '—'}</div></div>
           <div class="sc"><div class="sl">GEX CALL WALL</div><div class="sv gd">$${(g.gex_wall_call || 0).toFixed(2)}</div><div class="sc-">XAUUSD $${(g.gex_wall_call_adj || 0).toFixed(2)}</div></div>
           <div class="sc"><div class="sl">GEX PUT WALL</div><div class="sv gd">$${(g.gex_wall_put || 0).toFixed(2)}</div><div class="sc-">XAUUSD $${(g.gex_wall_put_adj || 0).toFixed(2)}</div></div>
           <div class="sc"><div class="sl">GAMMA FLIP</div><div class="sv gd">$${(gammaFlip || 0).toFixed(2)}</div><div class="sc-">XAUUSD $${((gammaFlip||0) * (d.multiplier||10.87)).toFixed(2)}</div></div>
@@ -849,7 +859,7 @@ function loadGex() {
                     <td>$${c.center_strike.toFixed(2)}</td>
                     <td><span class="badge ${c.cluster_type==='call_wall'?'b-buy':c.cluster_type==='put_wall'?'b-sell':'b-neu'}">${c.cluster_type.toUpperCase()}</span></td>
                     <td>${c.total_oi.toLocaleString()}</td>
-                    <td>${(c.net_gex/1e6).toFixed(2)}M</td>
+                    <td>${formatGex(c.net_gex/1e6)}</td>
                     <td>${(c.total_strength/1e9).toFixed(2)}B</td>
                   </tr>
                 `).join('')}
