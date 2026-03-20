@@ -9,9 +9,26 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping HF Space
+      - name: Wake up Space if paused
         run: |
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+          # Шаг 1: Проверяем статус Space
+          STATUS_JSON=$(curl -s \
             -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
-            https://askhat777-gld-options-live-dashboard.hf.space/health)
-          echo "Status: $STATUS"
+            "https://huggingface.co/api/spaces/Askhat777/GLD_OPTIONS_LIVE_DASHBOARD")
+          
+          STAGE=$(echo $STATUS_JSON | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('runtime',{}).get('stage','unknown'))" 2>/dev/null || echo "unknown")
+          echo "Space stage: $STAGE"
+          
+          # Шаг 2: Если на паузе — будим через API
+          if [ "$STAGE" = "PAUSED" ] || [ "$STAGE" = "SLEEPING" ]; then
+            echo "Space на паузе! Запускаем..."
+            curl -s -X POST \
+              -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
+              "https://huggingface.co/api/spaces/Askhat777/GLD_OPTIONS_LIVE_DASHBOARD/restart"
+            echo "Команда restart отправлена!"
+          else
+            echo "Space работает (stage=$STAGE), пингуем health..."
+            curl -s -o /dev/null -w "Health status: %{http_code}" \
+              -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
+              "https://askhat777-gld-options-live-dashboard.hf.space/health"
+          fi
