@@ -1,7 +1,7 @@
 // netlify/functions/check-key.js
 // Проверяет ключ + email → создаёт сессию
 // Переменные (Netlify → Site Settings → Environment Variables):
-//   HF_SPACE_URL    = https://askhat777-gld-options-live-dashboard.hf.space
+//   HF_SPACE_URL    = https://askhat777-gld-options-live-dashboar.hf.space
 //   HF_TOKEN        = hf_xxxxxxxxxxxxxxxx
 //   NETLIFY_SECRET  = (тот же что в HF Space Secrets)
 
