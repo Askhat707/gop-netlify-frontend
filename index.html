@@ -732,7 +732,7 @@ function loadChain() {
     <div class="panel"><div id="chain-w" style="overflow-x:auto"></div></div>`;
   (cachedData ? Promise.resolve(cachedData) : fetchData())
     .then(d => {
-      const chain = (d.chain || []).filter(r => Math.abs(r.strike - (d.spot || 0)) < 25);
+      const chain = (d.chain || []).filter(r => Math.abs(r.strike - (d.spot || 0)) < 300);
       const spot = d.spot || 0;
       document.getElementById('chain-w').innerHTML = `
         <table class="tbl">
