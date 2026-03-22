@@ -264,6 +264,40 @@
     }
     .rb:hover { background: rgba(200,168,75,.14); }
 
+    /* MUL & Expiry controls */
+    .ctrl-bar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 4px;
+    }
+    .ctrl-lbl {
+      font-size: 9px; letter-spacing: .08em; color: rgba(200,168,75,.5);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .ctrl-input {
+      width: 68px; padding: 4px 7px;
+      background: rgba(200,168,75,.06); border: 1px solid rgba(200,168,75,.2);
+      border-radius: 5px; color: var(--g1);
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      outline: none; text-align: center;
+    }
+    .ctrl-input:focus { border-color: rgba(200,168,75,.5); }
+    .ctrl-select {
+      padding: 4px 7px;
+      background: rgba(200,168,75,.06); border: 1px solid rgba(200,168,75,.2);
+      border-radius: 5px; color: var(--g1);
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      outline: none; cursor: pointer; min-width: 100px;
+    }
+    .ctrl-select:focus { border-color: rgba(200,168,75,.5); }
+    .ctrl-btn {
+      padding: 4px 10px; border-radius: 5px; cursor: pointer;
+      background: rgba(200,168,75,.1); border: 1px solid rgba(200,168,75,.25);
+      color: var(--g1); font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      letter-spacing: .05em; transition: all .2s;
+    }
+    .ctrl-btn:hover { background: rgba(200,168,75,.2); }
+    .ctrl-sep { width: 1px; height: 16px; background: rgba(200,168,75,.15); }
+
     /* BSM warning */
     .bsm-badge {
       display: inline-block; margin-left: 10px; padding: 2px 8px; border-radius: 100px;
@@ -300,6 +334,18 @@
   </div>
   <div class="nav-r">
     <div class="live"><div class="dot"></div>LIVE</div>
+    <!-- Контролы: мультипликатор и экспирация -->
+    <div class="ctrl-bar" id="ctrl-bar" style="display:none">
+      <div class="ctrl-lbl">MUL</div>
+      <input class="ctrl-input" id="ctrl-mul" type="number" value="10.87"
+             step="0.01" min="1" max="100"
+             onchange="this.dataset.userSet='1';applyMul()" oninput="this.dataset.userSet='1';applyMul()" title="Мультипликатор GLD→XAUUSD">
+      <div class="ctrl-sep"></div>
+      <div class="ctrl-lbl">ЭКСПИРАЦИЯ</div>
+      <select class="ctrl-select" id="ctrl-exp" onchange="applyExpiry()" title="Дата экспирации">
+        <option value="">Загрузка...</option>
+      </select>
+    </div>
     <div id="ui-user">
       <span class="u-plan" id="u-plan">—</span>
       <span class="u-email" id="u-email">—</span>
@@ -363,6 +409,45 @@
 </div>
 
 <script>
+  // ═══ ГЛОБАЛЬНЫЕ КОНТРОЛЫ: мультипликатор и экспирация ═══════════════════════
+  let USER_MUL = 10.87;       // пользовательский мультипликатор
+  let USER_EXPIRY = '';        // выбранная экспирация ('' = первая из данных)
+  let _lastData = null;        // кэш последних данных для перерасчёта
+
+  function applyMul() {
+    const v = parseFloat(document.getElementById('ctrl-mul').value);
+    if (!isNaN(v) && v > 0) {
+      USER_MUL = v;
+      if (_lastData) renderAll(_lastData);  // перерисовываем с новым MUL
+    }
+  }
+
+  function applyExpiry() {
+    USER_EXPIRY = document.getElementById('ctrl-exp').value;
+    fetchData();  // загружаем данные заново
+  }
+
+  function updateExpirySelector(data) {
+    const sel = document.getElementById('ctrl-exp');
+    // Собираем уникальные экспирации из цепочки
+    const expirations = [];
+    if (data.expiration) expirations.push(data.expiration);
+    if (data.meta && data.meta.expiration) {
+      const e = data.meta.expiration;
+      if (!expirations.includes(e)) expirations.push(e);
+    }
+    // Если есть chain — берём экспирации оттуда
+    const chainExp = (data.chain || []).map(r => r.expiration).filter(Boolean);
+    chainExp.forEach(e => { if (!expirations.includes(e)) expirations.push(e); });
+
+    if (expirations.length > 0) {
+      const cur = sel.value;
+      sel.innerHTML = expirations.map(e =>
+        `<option value="${e}" ${e === cur ? 'selected' : ''}>${e}</option>`
+      ).join('');
+    }
+  }
+
   // Функция форматирования GEX (вставьте это в самом начале)
 function formatGex(value) {
     if (value === undefined || value === null) return '0M';
@@ -509,6 +594,7 @@ function openApp() {
   document.getElementById('ui-user').style.display = 'flex';
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('app').classList.add('on');
+  document.getElementById('ctrl-bar').style.display = 'flex';
   loadOverview();
 }
 
@@ -576,6 +662,16 @@ async function fetchData() {
   });
   if (!r.ok) throw new Error('HTTP ' + r.status);
   cachedData = await r.json();
+  _lastData = cachedData;
+  // Обновляем мультипликатор если пользователь не менял вручную
+  const mulEl = document.getElementById('ctrl-mul');
+  if (mulEl && mulEl.dataset.userSet !== '1') {
+    const serverMul = cachedData.multiplier || 10.87;
+    USER_MUL = serverMul;
+    mulEl.value = serverMul.toFixed(2);
+  }
+  // Обновляем список экспираций
+  updateExpirySelector(cachedData);
   return cachedData;
 }
 
@@ -624,7 +720,7 @@ function skCards(n) {
 
 function buildOverviewStats(d) {
   const spot   = d.spot || 0;
-  const spotAdj = d.spot_adj || (spot * (d.multiplier || 10.87));
+  const spotAdj = d.spot_adj ? (spot * USER_MUL / (d.multiplier || 10.87)) : (spot * USER_MUL);
   const iv     = d.stats?.atm_iv || 0;
   const gexT   = d.gex?.total || 0;
   const regime = d.gex?.regime || '—';
@@ -732,7 +828,7 @@ function loadChain() {
     <div class="panel"><div id="chain-w" style="overflow-x:auto"></div></div>`;
   (cachedData ? Promise.resolve(cachedData) : fetchData())
     .then(d => {
-      const chain = (d.chain || []).filter(r => Math.abs(r.strike - (d.spot || 0)) < 300);
+      const chain = (d.chain || []).filter(r => Math.abs(r.strike - (d.spot || 0)) < 25);
       const spot = d.spot || 0;
       document.getElementById('chain-w').innerHTML = `
         <table class="tbl">
@@ -770,7 +866,7 @@ function loadLevels() {
     .then(d => {
       const k = d.levels || {};
       const s = d.stats || {};
-      const mul = d.multiplier || 10.87;
+      const mul = USER_MUL;
       const flipZones = k.flip_zones || [];
       let html = `
         <div class="sg" style="grid-template-columns:repeat(3,1fr);margin-bottom:14px">
@@ -831,7 +927,7 @@ function loadGex() {
           <div class="sc"><div class="sl">TOTAL GEX</div><div class="sv ${cls}">${formatGex(g.total || 0)}</div><div class="sc- ${cls}">${g.regime || '—'}</div></div>
           <div class="sc"><div class="sl">GEX CALL WALL</div><div class="sv gd">$${(g.gex_wall_call || 0).toFixed(2)}</div><div class="sc-">XAUUSD $${(g.gex_wall_call_adj || 0).toFixed(2)}</div></div>
           <div class="sc"><div class="sl">GEX PUT WALL</div><div class="sv gd">$${(g.gex_wall_put || 0).toFixed(2)}</div><div class="sc-">XAUUSD $${(g.gex_wall_put_adj || 0).toFixed(2)}</div></div>
-          <div class="sc"><div class="sl">GAMMA FLIP</div><div class="sv gd">$${(gammaFlip || 0).toFixed(2)}</div><div class="sc-">XAUUSD $${((gammaFlip||0) * (d.multiplier||10.87)).toFixed(2)}</div></div>
+          <div class="sc"><div class="sl">GAMMA FLIP</div><div class="sv gd">$${(gammaFlip || 0).toFixed(2)}</div><div class="sc-">XAUUSD $${((gammaFlip||0) * USER_MUL).toFixed(2)}</div></div>
         </div>
         <div class="panel" style="margin-top:12px">
           <div class="ph"><div class="pt">ATTRACTION LEVELS (Long GEX)</div></div>
@@ -879,12 +975,12 @@ function loadGex() {
               <div class="sc">
                 <div class="sl">БЛИЖАЙШАЯ ПОДДЕРЖКА</div>
                 <div class="sv gd">$${(signals.nearest_support?.strike || 0).toFixed(2)}</div>
-                <div class="sc-">XAUUSD $${((signals.nearest_support?.strike||0)*d.multiplier).toFixed(2)}</div>
+                <div class="sc-">XAUUSD $${((signals.nearest_support?.strike||0)*USER_MUL).toFixed(2)}</div>
               </div>
               <div class="sc">
                 <div class="sl">БЛИЖАЙШЕЕ СОПРОТИВЛЕНИЕ</div>
                 <div class="sv gd">$${(signals.nearest_resistance?.strike || 0).toFixed(2)}</div>
-                <div class="sc-">XAUUSD $${((signals.nearest_resistance?.strike||0)*d.multiplier).toFixed(2)}</div>
+                <div class="sc-">XAUUSD $${((signals.nearest_resistance?.strike||0)*USER_MUL).toFixed(2)}</div>
               </div>
             </div>
             ${signals.trading_range ? `
